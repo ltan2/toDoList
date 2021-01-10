@@ -12,7 +12,7 @@ app.use(bodyParser.urlencoded({extended:true}));
 app.use(express.static("public"));
 
 //establish connection to db
-mongoose.connect("mongodb://localhost:27017/toDoDB",{useNewUrlParser:true,useUnifiedTopology: true});
+mongoose.connect("mongodb+srv://admin:Pooh123@cluster0.78n71.mongodb.net/toDoDB?retryWrites=true&w=majority",{useNewUrlParser:true,useUnifiedTopology: true,useFindAndModify: false});
 
 //create a new schema
 const itemsSchema = {
@@ -41,6 +41,7 @@ name: String,
 items: [itemsSchema]
 };
 
+//create a model
 const List = mongoose.model("List",listSchema);
 
 
@@ -74,52 +75,86 @@ else{
 
 app.get("/:customListName",function(req,res){
 const customListName = req.params.customListName;
-const list = new List({
-name : customListNames,
-items:defaultItems
-});
-list.save();
 
+List.findOne({name:customListName},function(err,foundList){
+if(!err){
+  if(!foundList){
+  //create new list
+  const list = new List({
+  name : customListName,
+  items :defaultItems
+  });
+  list.save();
+  res.redirect("/"+ customListName);
+  }
+  else{
+  res.render("index",{listTitle: foundList.name, newListItems:foundList.items});
+  }
+}
+
+});
 });
 
 app.post("/",function(req,res){
-const itemName = req.body.newItem 
+const itemName = req.body.newItem;
+const listName = req.body.list;
+
 const item = new Item ({
 name : itemName
 });
-item.save()
-res.redirect("/");
-/*if(req.body.list == "Work"){
-workItems.push(item);
-res.redirect("/work");
+
+//console.log(itemName);
+let day = date();
+
+if(listName == encodeURIComponent(day)){
+ item.save();
+ res.redirect("/");
 }
 else{
-items.push(item);
-res.redirect("/");
-}*/
+ List.findOne({name:listName},function(err,foundList){
+ if(err){
+ console.log(err);
+ }
+ else{
+ foundList.items.push(item);
+ foundList.save();
+ res.redirect("/" + listName);
+ }
+ });
+}
 
 
 });
 
 app.post("/delete",function(req,res){
-const checkItemId = req.body.checkbox
+const checkItemId = req.body.checkbox;
+const listName = req.body.listName;
+let day = date();
 
+if(listName == encodeURIComponent(day)){
 Item.findByIdAndRemove(checkItemId,function(err){
-if(err){
-console.log(err);
+  if(err){
+   console.log(err);
+   }
+   else{
+   console.log("Succefully deleted");
+   res.redirect("/");
+   }
+});
 }
+
 else{
-console.log("Succefully deleted");
-res.redirect("/");
+List.findOneAndUpdate({name:listName},{$pull:{items:{_id: checkItemId}}},function(err,foundList){
+  if(!err){
+   res.redirect("/" + listName);
+   }
+ });
 }
-});
 
 });
 
 
-app.get("/work",function(req,res){
-res.render("index",{listTitle:"Work List",newListItems: workItems});
-});
+
 
 app.listen(3000,function(){
 console.log("running on server 3000");
