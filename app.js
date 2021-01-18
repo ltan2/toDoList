@@ -45,7 +45,7 @@ items: [itemsSchema]
 const List = mongoose.model("List",listSchema);
 
 
-app.get("/",function(req,res){
+/*app.get("/",function(req,res){
 let day = date();
 
 //find all items in database
@@ -72,8 +72,38 @@ else{
 });
 
 });
+*/
 
-app.get("/:customListName",function(req,res){
+app.get("/",function(req,res){
+let day = date();
+res.render("login");
+});
+
+app.post("/login",function(req,res){
+if(req.body.username == process.env.NAME){
+  if(req.body.password == process.env.PASS){
+     List.findOne({name: "LinAi"},function(err,foundList){
+     if(!err){
+     if(!foundList){
+     //create new list
+     const list = new List({
+     name : "LinAi",
+     items :defaultItems
+    });
+    list.save();
+    res.render("index",{listTitle:day, newListItems:foundList.items});
+    }
+  else{
+  res.render("index",{listTitle:day, newListItems:foundList.items});
+  }
+}
+
+});
+
+  }
+}
+});
+/*app.get("/:customListName",function(req,res){
 const customListName = req.params.customListName;
 
 List.findOne({name:customListName},function(err,foundList){
@@ -94,7 +124,7 @@ if(!err){
 
 });
 });
-
+*/
 app.post("/",function(req,res){
 const itemName = req.body.newItem;
 const listName = req.body.list;
