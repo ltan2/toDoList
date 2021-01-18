@@ -28,7 +28,8 @@ mongoose.connect("mongodb+srv://admin:Pooh123@cluster0.78n71.mongodb.net/toDoDB?
 //create a userSchema
 const userSchema = new mongoose.Schema({
 email : String,
-password: String
+password: String,
+userName : String
 });
 
 //create a new schema
@@ -85,7 +86,8 @@ app.post("/login",function(req,res){
 
 const user = new User({
 username: req.body.username,
-password: req.body.pasword
+password: req.body.pasword,
+userName : req.body.userN
 });
 const name = req.body.userN;
 
@@ -135,7 +137,7 @@ res.render("register");
  
 app.post("/register",function(req,res){
 const userName = req.body.userN;
-User.register({username: req.body.username}, req.body.password, function(err,user){
+User.register({username: req.body.username, name: userName}, req.body.password, function(err,user){
 if(err){
 console.log(err);
 res.redirect("/register");
