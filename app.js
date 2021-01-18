@@ -1,29 +1,56 @@
 //jshint esversion:6
 
+require('dotenv').config();
 const express = require("express");
 const bodyParser = require("body-parser");
 const date = require(__dirname + "/date.js");
 const mongoose = require("mongoose");
+const session = require("express-session");
+const passport = require("passport");
+const passportLocalMongoose = require("passport-local-mongoose");
 
 const app = express();
 app.set('view engine', 'ejs');
 
 app.use(bodyParser.urlencoded({extended:true}));
 app.use(express.static("public"));
+app.use(session({
+  secret: 'little secret secrets',
+  resave: false,
+  saveUninitialized: true
+}));
+app.use(passport.initialize());
+app.use(passport.session());
 
 //establish connection to db
-mongoose.connect("mongodb+srv://admin:Pooh123@cluster0.78n71.mongodb.net/toDoDB?retryWrites=true&w=majority",{useNewUrlParser:true,useUnifiedTopology: true,useFindAndModify: false});
+mongoose.connect("mongodb+srv://admin:Pooh123@cluster0.78n71.mongodb.net/toDoDB?retryWrites=true&w=majority",{useNewUrlParser:true,useUnifiedTopology: true,useFindAndModify: false,useCreateIndex: true});
+
+//create a userSchema
+const userSchema = new mongoose.Schema({
+email : String,
+password: String
+});
 
 //create a new schema
 const itemsSchema = {
 name:String
 };
 
+userSchema.plugin(passportLocalMongoose);
+
+const User = mongoose.model("User", userSchema);
+// use static authenticate method of model in LocalStrategy
+passport.use(User.createStrategy());
+
+// use static serialize and deserialize of model for passport session support
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser());
+
 const Item = mongoose.model("Item",itemsSchema);
 
 //create new document
 const item1 = new Item({
-name: "Welcome to your ro do list"
+name: "Welcome to your to do list"
 });
 
 const item2 = new Item({
@@ -45,102 +72,94 @@ items: [itemsSchema]
 const List = mongoose.model("List",listSchema);
 
 
-/*app.get("/",function(req,res){
-let day = date();
-
-//find all items in database
-Item.find({},function(err,foundItems){ //foundItems stores what db returns
-if(err){
-console.log(err);
-}
-else{
- if(foundItems.length == 0){
-  Item.insertMany(defaultItems,function(err){
-   if(err){
-    console.log(err);
-   }
-   else{
-    console.log("Succefully save");
-   }
-  });
-  res.redirect("/");
- }
-  else{
-  res.render("index",{listTitle:day, newListItems:foundItems});
-  }
-}
-});
-
-});
-*/
 
 app.get("/",function(req,res){
-let day = date();
+res.render("home");
+});
+
+app.get("/login",function(req,res){
 res.render("login");
 });
 
 app.post("/login",function(req,res){
-if(req.body.username == process.env.NAME){
-  if(req.body.password == process.env.PASS){
-     List.findOne({name: "LinAi"},function(err,foundList){
-     if(!err){
-     if(!foundList){
-     //create new list
-     const list = new List({
-     name : "LinAi",
-     items :defaultItems
-    });
-    list.save();
-    res.render("index",{listTitle:day, newListItems:foundList.items});
-    }
-  else{
-  res.render("index",{listTitle:day, newListItems:foundList.items});
-  }
+
+const user = new User({
+username: req.body.username,
+password: req.body.pasword
+});
+const name = req.body.userN;
+
+req.login(user,function(err){
+if(err){
+console.log(err);
+}
+else{
+passport.authenticate("local")(req,res,function(){
+res.redirect("/list?Name=" + name);
+});
 }
 
 });
-
-  }
-}
 });
-/*app.get("/:customListName",function(req,res){
-const customListName = req.params.customListName;
 
-List.findOne({name:customListName},function(err,foundList){
+app.get("/list",function(req,res){
+let day = date();
+const listName = req.query.Name;
+if(req.isAuthenticated()){
+
+List.findOne({name: listName},function(err,foundList){
 if(!err){
-  if(!foundList){
-  //create new list
-  const list = new List({
-  name : customListName,
+ if(!foundList){
+ //create new list
+ const list = new List({
+  name : listName,
   items :defaultItems
   });
-  list.save();
-  res.redirect("/"+ customListName);
-  }
-  else{
-  res.render("index",{listTitle: foundList.name, newListItems:foundList.items});
-  }
+ list.save();
+ res.redirect("/list?Name=" + listName);
+
+ }
+ else{
+  res.render("index",{listTitle:day, newListItems:foundList.items,listOwner:listName});
+ }
+ 
+}
+
+});
+}
+});
+
+app.get("/register",function(req,res){
+res.render("register");
+});
+ 
+app.post("/register",function(req,res){
+const userName = req.body.userN;
+User.register({username: req.body.username}, req.body.password, function(err,user){
+if(err){
+console.log(err);
+res.redirect("/register");
+}
+else{
+passport.authenticate("local")(req,res,function(){
+res.redirect("/list?Name=" + userName);
+});
 }
 
 });
 });
-*/
-app.post("/",function(req,res){
-const itemName = req.body.newItem;
-const listName = req.body.list;
 
+app.post("/add",function(req,res){
+const itemName = req.body.newItem;
+const listName = req.body.listName;
+
+if(req.isAuthenticated()){
 const item = new Item ({
 name : itemName
 });
 
-//console.log(itemName);
 let day = date();
 
-if(listName == encodeURIComponent(day)){
- item.save();
- res.redirect("/");
-}
-else{
  List.findOne({name:listName},function(err,foundList){
  if(err){
  console.log(err);
@@ -148,47 +167,44 @@ else{
  else{
  foundList.items.push(item);
  foundList.save();
- res.redirect("/" + listName);
+ res.redirect("/list?Name=" + listName );
  }
  });
-}
 
+}
 
 });
 
 app.post("/delete",function(req,res){
 const checkItemId = req.body.checkbox;
 const listName = req.body.listName;
+
 let day = date();
+if(req.isAuthenticated()){
 
-if(listName == encodeURIComponent(day)){
-Item.findByIdAndRemove(checkItemId,function(err){
-  if(err){
-   console.log(err);
-   }
-   else{
-   console.log("Succefully deleted");
-   res.redirect("/");
-   }
-});
-}
-
-else{
 List.findOneAndUpdate({name:listName},{$pull:{items:{_id: checkItemId}}},function(err,foundList){
   if(!err){
-   res.redirect("/" + listName);
+   res.redirect("/list?Name=" + listName);
    }
  });
-}
 
+}
 });
+
+app.get("/logout",function(req,res){
+req.logout();
+res.redirect("/");
+});
+
 
 let port = process.env.PORT;
 if(port == null || port == ""){
 port = 3000;
 }
 
+
 app.listen(port,function(){
+
 console.log("server started succesfully");
 });
 
