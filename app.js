@@ -23,7 +23,7 @@ app.use(passport.initialize());
 app.use(passport.session());
 
 //establish connection to db
-mongoose.connect("mongodb+srv://admin:Pooh123@cluster0.78n71.mongodb.net/toDoDB?retryWrites=true&w=majority",{useNewUrlParser:true,useUnifiedTopology: true,useFindAndModify: false,useCreateIndex: true});
+mongoose.connect("CreateIndex: true});
 
 //create a userSchema
 const userSchema = new mongoose.Schema({
