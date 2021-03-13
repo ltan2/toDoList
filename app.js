@@ -74,11 +74,11 @@ const List = mongoose.model("List",listSchema);
 
 
 app.get("/",function(req,res){
-res.render("home");
+	res.render("home");
 });
 
 app.get("/login",function(req,res){
-res.render("login");
+	res.render("login");
 });
 
 app.post("/login",function(req,res){
@@ -91,11 +91,11 @@ const name = req.body.userN;
 
 req.login(user,function(err){
 if(err){
-console.log(err);
+	console.log(err);
 }
 else{
-passport.authenticate("local")(req,res,function(){
-res.redirect("/list?Name=" + name);
+	passport.authenticate("local")(req,res,function(){
+	res.redirect("/list?Name=" + name);
 });
 }
 
@@ -106,48 +106,48 @@ app.get("/list",function(req,res){
 let day = date();
 const listName = req.query.Name;
 if(req.isAuthenticated()){
-
-List.findOne({name: listName},function(err,foundList){
-if(!err){
- if(!foundList){
- //create new list
- const list = new List({
-  name : listName,
-  items :defaultItems
-  });
- list.save();
- res.redirect("/list?Name=" + listName);
-
- }
- else{
-  res.render("index",{listTitle:day, newListItems:foundList.items,listOwner:listName});
- }
- 
-}
-
+	List.findOne({name: listName},function(err,foundList){
+	if(!err){
+		if(!foundList){
+			//create new list
+		 	const list = new List({
+		  		name : listName,
+		  		items :defaultItems
+		  	});
+			list.save();
+		 	res.redirect("/list?Name=" + listName);
+	 	}
+ 		else{
+  			res.render("index",{listTitle:day, newListItems:foundList.items,listOwner:listName});
+ 		}
+ 	}
 });
+
 }
 });
+
 
 app.get("/register",function(req,res){
-res.render("register");
+	res.render("register");
 });
+ 
  
 app.post("/register",function(req,res){
 const userName = req.body.userN;
-User.register({username: req.body.username}, req.body.password, function(err,user){
-if(err){
-console.log(err);
-res.redirect("/register");
-}
-else{
-passport.authenticate("local")(req,res,function(){
-res.redirect("/list?Name=" + userName);
-});
-}
+	User.register({username: req.body.username}, req.body.password, function(err,user){
+		if(err){
+			console.log(err);
+			res.redirect("/register");
+		}
+		else{
+			passport.authenticate("local")(req,res,function(){
+			res.redirect("/list?Name=" + userName);
+			});
+		}
 
+	});
 });
-});
+
 
 app.post("/add",function(req,res){
 const itemName = req.body.newItem;
@@ -192,14 +192,14 @@ List.findOneAndUpdate({name:listName},{$pull:{items:{_id: checkItemId}}},functio
 });
 
 app.get("/logout",function(req,res){
-req.logout();
-res.redirect("/");
+	req.logout();
+	res.redirect("/");
 });
 
 
 let port = process.env.PORT;
 if(port == null || port == ""){
-port = 3000;
+	port = 3000;
 }
 
 
